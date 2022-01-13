@@ -21,121 +21,54 @@ using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
 using Robust.Shared.Serialization.Manager.Attributes;
 using Robust.Shared.ViewVariables;
+using System;
+using System.Threading;
+using System.Collections.Generic;
+using Content.Server.Atmos.Monitor.Systems;
+using Content.Server.DeviceNetwork.Components;
+using Content.Server.Power.Components;
+using Content.Server.VendingMachines; // TODO: Move this out of vending machines???
+using Content.Server.WireHacking;
+using Content.Shared.Atmos.Monitor.Components;
+using Robust.Shared.GameObjects;
+using Robust.Shared.Maths;
+using Robust.Shared.Network;
+using Robust.Shared.ViewVariables;
+
 using static Content.Shared.Wires.SharedWiresComponent;
+using static Content.Shared.Wires.SharedWiresComponent.WiresAction;
 
 namespace Content.Server.VendingMachines
 {
     [RegisterComponent]
     [ComponentReference(typeof(IActivate))]
-    public class VendingMachineComponent : SharedVendingMachineComponent, IActivate, IBreakAct, IWires
+    public class VendingMachineComponent : SharedVendingMachineComponent, IBreakAct, IWires
     {
-        [Dependency] private readonly IEntityManager _entMan = default!;
-        [Dependency] private readonly IRobustRandom _random = default!;
-        [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
+        [Dependency] public readonly IEntityManager _entMan = default!;
+        [Dependency] public readonly IRobustRandom _random = default!;
+        [Dependency] public readonly IPrototypeManager _prototypeManager = default!;
 
-        private bool _ejecting;
-        private TimeSpan _animationDuration = TimeSpan.Zero;
+        public bool _ejecting;
+        public TimeSpan _animationDuration = TimeSpan.Zero;
         [DataField("pack")]
-        private string _packPrototypeId = string.Empty;
-        private string _spriteName = "";
+        public string _packPrototypeId = string.Empty;
+        public string _spriteName = "";
 
-        private bool Powered => !_entMan.TryGetComponent(Owner, out ApcPowerReceiverComponent? receiver) || receiver.Powered;
-        private bool _broken;
+        public bool Powered => !_entMan.TryGetComponent(Owner, out ApcPowerReceiverComponent? receiver) || receiver.Powered;
+        public bool _broken;
 
         [DataField("soundVend")]
         // Grabbed from: https://github.com/discordia-space/CEV-Eris/blob/f702afa271136d093ddeb415423240a2ceb212f0/sound/machines/vending_drop.ogg
-        private SoundSpecifier _soundVend = new SoundPathSpecifier("/Audio/Machines/machine_vend.ogg");
+        public SoundSpecifier soundVend = new SoundPathSpecifier("/Audio/Machines/machine_vend.ogg");
         [DataField("soundDeny")]
         // Yoinked from: https://github.com/discordia-space/CEV-Eris/blob/35bbad6764b14e15c03a816e3e89aa1751660ba9/sound/machines/Custom_deny.ogg
-        private SoundSpecifier _soundDeny = new SoundPathSpecifier("/Audio/Machines/custom_deny.ogg");
+        public SoundSpecifier _soundDeny = new SoundPathSpecifier("/Audio/Machines/custom_deny.ogg");
 
-        [ViewVariables] private BoundUserInterface? UserInterface => Owner.GetUIOrNull(VendingMachineUiKey.Key);
+        [ViewVariables] public BoundUserInterface? UserInterface => Owner.GetUIOrNull(VendingMachineUiKey.Key);
 
         public bool Broken => _broken;
 
-        void IActivate.Activate(ActivateEventArgs eventArgs)
-        {
-            if(!_entMan.TryGetComponent(eventArgs.User, out ActorComponent? actor))
-            {
-                return;
-            }
-            if (!Powered)
-                return;
-
-            var wires = _entMan.GetComponent<WiresComponent>(Owner);
-            if (wires.IsPanelOpen)
-            {
-                wires.OpenInterface(actor.PlayerSession);
-            } else
-            {
-                UserInterface?.Toggle(actor.PlayerSession);
-            }
-        }
-
-        private void InitializeFromPrototype()
-        {
-            if (string.IsNullOrEmpty(_packPrototypeId)) { return; }
-            if (!_prototypeManager.TryIndex(_packPrototypeId, out VendingMachineInventoryPrototype? packPrototype))
-            {
-                return;
-            }
-
-            _entMan.GetComponent<MetaDataComponent>(Owner).EntityName = packPrototype.Name;
-            _animationDuration = TimeSpan.FromSeconds(packPrototype.AnimationDuration);
-            _spriteName = packPrototype.SpriteName;
-            if (!string.IsNullOrEmpty(_spriteName))
-            {
-                var spriteComponent = _entMan.GetComponent<SpriteComponent>(Owner);
-                const string vendingMachineRSIPath = "Structures/Machines/VendingMachines/{0}.rsi";
-                spriteComponent.BaseRSIPath = string.Format(vendingMachineRSIPath, _spriteName);
-            }
-
-            var inventory = new List<VendingMachineInventoryEntry>();
-            foreach(var (id, amount) in packPrototype.StartingInventory)
-            {
-                inventory.Add(new VendingMachineInventoryEntry(id, amount));
-            }
-            Inventory = inventory;
-        }
-
-        protected override void Initialize()
-        {
-            base.Initialize();
-
-            if (UserInterface != null)
-            {
-                UserInterface.OnReceiveMessage += UserInterfaceOnOnReceiveMessage;
-            }
-
-            if (_entMan.TryGetComponent(Owner, out ApcPowerReceiverComponent? receiver))
-            {
-                TrySetVisualState(receiver.Powered ? VendingMachineVisualState.Normal : VendingMachineVisualState.Off);
-            }
-
-            InitializeFromPrototype();
-        }
-
-        [Obsolete("Component Messages are deprecated, use Entity Events instead.")]
-        public override void HandleMessage(ComponentMessage message, IComponent? component)
-        {
-#pragma warning disable 618
-            base.HandleMessage(message, component);
-#pragma warning restore 618
-            switch (message)
-            {
-                case PowerChangedMessage powerChanged:
-                    UpdatePower(powerChanged);
-                    break;
-            }
-        }
-
-        private void UpdatePower(PowerChangedMessage args)
-        {
-            var state = args.Powered ? VendingMachineVisualState.Normal : VendingMachineVisualState.Off;
-            TrySetVisualState(state);
-        }
-
-        private void UserInterfaceOnOnReceiveMessage(ServerBoundUserInterfaceMessage serverMsg)
+        public void OnUiReceiveMessage(ServerBoundUserInterfaceMessage serverMsg)
         {
             if (!Powered)
                 return;
@@ -152,7 +85,7 @@ namespace Content.Server.VendingMachines
             }
         }
 
-        private void TryEject(string id)
+        private void TryDispense(string id)
         {
             if (_ejecting || _broken)
             {
@@ -173,76 +106,211 @@ namespace Content.Server.VendingMachines
                 Deny();
                 return;
             }
-
-            _ejecting = true;
-            entry.Amount--;
-            UserInterface?.SendMessage(new VendingMachineInventoryMessage(Inventory));
-            TrySetVisualState(VendingMachineVisualState.Eject);
-
-            Owner.SpawnTimer(_animationDuration, () =>
-            {
-                _ejecting = false;
-                TrySetVisualState(VendingMachineVisualState.Normal);
-                _entMan.SpawnEntity(id, _entMan.GetComponent<TransformComponent>(Owner).Coordinates);
-            });
-
-            SoundSystem.Play(Filter.Pvs(Owner), _soundVend.GetSound(), Owner, AudioParams.Default.WithVolume(-2f));
+            if (entry.ID != null) { // If this item is not a stored entity, eject as a new entity of type
+                TryEjectVendorItem(entry);
+                return;
+            }
+            return;
         }
 
-        private void TryEject(string id, EntityUid? sender)
+        // public bool IsAuthorized(EntityUid? sender)
+        // {
+        //     if (_entMan.TryGetComponent<AccessReaderComponent?>(Owner, out var accessReader))
+        //     {
+        //         var accessSystem = EntitySystem.Get<AccessReaderSystem>();
+        //         if (sender == null || !accessSystem.IsAllowed(accessReader, sender.Value))
+        //         {
+        //             Owner.PopupMessageEveryone(Loc.GetString("vending-machine-component-try-eject-access-denied"));
+        //             Deny();
+        //             return;
+        //         }
+        //     }
+        //     return true;
+        // }
+
+        // private void AuthorizedVend(string id, EntityUid? sender)
+        // {
+        //     if (IsAuthorized(sender))
+        //     {
+        //         TryDispense(id);
+        //     }
+        //     return;
+        // }
+
+
+        private enum Wires
         {
-            if (_entMan.TryGetComponent<AccessReaderComponent?>(Owner, out var accessReader))
-            {
-                var accessSystem = EntitySystem.Get<AccessReaderSystem>();
-                if (sender == null || !accessSystem.IsAllowed(accessReader, sender.Value))
-                {
-                    Owner.PopupMessageEveryone(Loc.GetString("vending-machine-component-try-eject-access-denied"));
-                    Deny();
-                    return;
-                }
-            }
-            TryEject(id);
+            // Cutting this kills power.
+            // Pulsing it disrupts power.
+            Power,
+            // Cutting this allows full access.
+            // Pulsing this does nothing.
+            Access,
+            /// Shoots a random item when pulsed.
+            Shoot,
+            // // Cutting this clears sync'd devices, and makes
+            // // the alarm unable to resync.
+            // // Pulsing this resyncs all devices (ofc current
+            // // implementation just auto-does this anyways)
+            // DeviceSync,
+            // Cutting stops ads from playing
+            // Pulsing causes to play immediately
+            Advertisement
         }
 
-        private void Deny()
+        public void RegisterWires(WiresComponent.WiresBuilder builder)
         {
-            SoundSystem.Play(Filter.Pvs(Owner), _soundDeny.GetSound(), Owner, AudioParams.Default.WithVolume(-2f));
+            foreach (var wire in Enum.GetValues<Wires>())
+                builder.CreateWire(wire);
 
-            // Play the Deny animation
-            TrySetVisualState(VendingMachineVisualState.Deny);
-            //TODO: This duration should be a distinct value specific to the deny animation
-            Owner.SpawnTimer(_animationDuration, () =>
-            {
-                TrySetVisualState(VendingMachineVisualState.Normal);
-            });
+            UpdateWires();
         }
 
-        private void TrySetVisualState(VendingMachineVisualState state)
+        public void UpdateWires()
         {
-            var finalState = state;
-            if (_broken)
-            {
-                finalState = VendingMachineVisualState.Broken;
-            }
-            else if (_ejecting)
-            {
-                finalState = VendingMachineVisualState.Eject;
-            }
-            else if (!Powered)
-            {
-                finalState = VendingMachineVisualState.Off;
-            }
+            if (_airAlarmSystem == null)
+                _airAlarmSystem = EntitySystem.Get<AirAlarmSystem>();
 
-            if (_entMan.TryGetComponent(Owner, out AppearanceComponent? appearance))
+            if (WiresComponent == null) return;
+
+            var pwrLightState = (PowerPulsed, PowerCut) switch {
+                (true, false) => StatusLightState.BlinkingFast,
+                (_, true) => StatusLightState.Off,
+                (_, _) => StatusLightState.On
+            };
+
+            var powerLight = new StatusLightData(Color.Yellow, pwrLightState, "POWR");
+
+            var accessLight = new StatusLightData(
+                Color.Green,
+                WiresComponent.IsWireCut(Wires.Access) ? StatusLightState.Off : StatusLightState.On,
+                "ACC"
+            );
+
+            var panicLight = new StatusLightData(
+                Color.Red,
+                CurrentMode == AirAlarmMode.Panic ? StatusLightState.On : StatusLightState.Off,
+                "PAN"
+            );
+
+            var syncLightState = StatusLightState.BlinkingSlow;
+
+            if (AtmosMonitorComponent != null && !AtmosMonitorComponent.NetEnabled)
+                syncLightState = StatusLightState.Off;
+            else if (DeviceData.Count != 0)
+                syncLightState = StatusLightState.On;
+
+            var syncLight = new StatusLightData(Color.Orange, syncLightState, "NET");
+
+            WiresComponent.SetStatus(AirAlarmWireStatus.Power, powerLight);
+            WiresComponent.SetStatus(AirAlarmWireStatus.Access, accessLight);
+            WiresComponent.SetStatus(AirAlarmWireStatus.Panic, panicLight);
+            WiresComponent.SetStatus(AirAlarmWireStatus.DeviceSync, syncLight);
+        }
+
+        private bool _powerCut;
+        private bool PowerCut
+        {
+            get => _powerCut;
+            set
             {
-                appearance.SetData(VendingMachineVisuals.VisualState, finalState);
+                _powerCut = value;
+                SetPower();
             }
         }
 
-        public void OnBreak(BreakageEventArgs eventArgs)
+        private bool _powerPulsed;
+        private bool PowerPulsed
         {
-            _broken = true;
-            TrySetVisualState(VendingMachineVisualState.Broken);
+            get => _powerPulsed && !_powerCut;
+            set
+            {
+                _powerPulsed = value;
+                SetPower();
+            }
+        }
+
+        private void SetPower()
+        {
+            if (DeviceRecvComponent != null
+                && WiresComponent != null)
+                DeviceRecvComponent.PowerDisabled = PowerPulsed || PowerCut;
+        }
+
+        public void WiresUpdate(WiresUpdateEventArgs args)
+        {
+            if (DeviceNetComponent == null) return;
+
+            if (_airAlarmSystem == null)
+                _airAlarmSystem = EntitySystem.Get<AirAlarmSystem>();
+
+            switch (args.Action)
+            {
+                case Pulse:
+                    switch (args.Identifier)
+                    {
+                        case Wires.Power:
+                            PowerPulsed = true;
+                            _powerPulsedCancel.Cancel();
+                            _powerPulsedCancel = new CancellationTokenSource();
+                            Owner.SpawnTimer(TimeSpan.FromSeconds(PowerPulsedTimeout),
+                                () => PowerPulsed = false,
+                                _powerPulsedCancel.Token);
+                            break;
+                        case Wires.Panic:
+                            if (CurrentMode != AirAlarmMode.Panic)
+                                _airAlarmSystem.SetMode(Owner, DeviceNetComponent.Address, AirAlarmMode.Panic, true, false);
+                            break;
+                        case Wires.DeviceSync:
+                            _airAlarmSystem.SyncAllDevices(Owner);
+                            break;
+                    }
+                    break;
+                case Mend:
+                    switch (args.Identifier)
+                    {
+                        case Wires.Power:
+                            _powerPulsedCancel.Cancel();
+                            PowerPulsed = false;
+                            PowerCut = false;
+                            break;
+                        case Wires.Panic:
+                            if (CurrentMode == AirAlarmMode.Panic)
+                                _airAlarmSystem.SetMode(Owner, DeviceNetComponent.Address, AirAlarmMode.Filtering, true, false);
+                            break;
+                        case Wires.Access:
+                            FullAccess = false;
+                            break;
+                        case Wires.DeviceSync:
+                            if (AtmosMonitorComponent != null)
+                                AtmosMonitorComponent.NetEnabled = true;
+
+                            break;
+                    }
+                    break;
+                case Cut:
+                    switch (args.Identifier)
+                    {
+                        case Wires.DeviceSync:
+                            DeviceData.Clear();
+                            if (AtmosMonitorComponent != null)
+                            {
+                                AtmosMonitorComponent.NetworkAlarmStates.Clear();
+                                AtmosMonitorComponent.NetEnabled = false;
+                            }
+
+                            break;
+                        case Wires.Power:
+                            PowerCut = true;
+                            break;
+                        case Wires.Access:
+                            FullAccess = true;
+                            break;
+                    }
+                    break;
+            }
+
+            UpdateWires();
         }
 
         public enum Wires
@@ -299,5 +367,8 @@ namespace Content.Server.VendingMachines
         void WiresUpdate(WiresUpdateEventArgs args);
 
     }
+
+
+
 }
 

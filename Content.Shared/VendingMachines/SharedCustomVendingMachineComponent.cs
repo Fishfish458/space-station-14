@@ -4,13 +4,14 @@ using Robust.Shared.GameObjects;
 using Robust.Shared.GameStates;
 using Robust.Shared.Serialization;
 using Robust.Shared.ViewVariables;
+using Robust.Shared.Serialization.Manager.Attributes;
 
 namespace Content.Shared.VendingMachines
 {
     [NetworkedComponent()]
-    public class SharedVendingMachineComponent : Component
+    public class SharedCustomVendingMachineComponent : Component
     {
-        public override string Name => "VendingMachine";
+        public override string Name => "CustomVendingMachine";
 
         [ViewVariables]
         public List<VendingMachineInventoryEntry> Inventory = new();
@@ -67,6 +68,7 @@ namespace Content.Shared.VendingMachines
         {
             [ViewVariables(VVAccess.ReadWrite)]
             public string ID;
+            [DataField("name")]
             public string Name;
             public EntityUid? EntityID;
             public uint Amount;
