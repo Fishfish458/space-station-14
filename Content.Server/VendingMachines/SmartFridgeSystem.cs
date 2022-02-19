@@ -12,7 +12,9 @@ using Content.Server.Storage.Components;
 using System.Linq;
 using Content.Server.VendingMachines.Systems;
 using Content.Server.VendingMachines;
+using Content.Shared.VendingMachines;
 
+using static Content.Shared.VendingMachines.SharedVendingMachineComponent;
 using static Content.Server.VendingMachines.Systems.BaseVendingMachineSystem;
 
 // using static Content.Shared.SmartFridge.SharedSmartFridgeComponent;
@@ -106,13 +108,13 @@ namespace Content.Server.VendingMachine.Systems
             if (!matchedEntry)
             {
                 uint itemID = _nextAllocatedId++;
-                SmartFridgeInventoryEntry newEntry = new SmartFridgeInventoryEntry(itemID, name, 1);
+                VendingMachineInventoryEntry newEntry = new VendingMachineInventoryEntry(itemID, name, 1);
                 fridgeComponent.entityReference.Add(itemID, new Queue<EntityUid>(new[] {itemUid}));
                 fridgeComponent.Inventory.Add(newEntry);
             }
 
             fridgeComponent.Storage.Insert(itemUid);
-            fridgeComponent.UserInterface?.SendMessage(new SmartFridgeInventoryMessage(fridgeComponent.Inventory));
+            fridgeComponent.UserInterface?.SendMessage(new VendingMachineInventoryMessage(fridgeComponent.Inventory));
             return true;
         }
 
@@ -124,7 +126,7 @@ namespace Content.Server.VendingMachine.Systems
             if (fridgeComponent.Storage == null || fridgeComponent.Ejecting || fridgeComponent.Inventory == null || fridgeComponent.Inventory.Count == 0 || fridgeComponent.Broken || !IsPowered(uid, fridgeComponent))
                 return;
 
-            SmartFridgeInventoryEntry? entry = fridgeComponent.Inventory.Find(x => x.ID == itemId);
+            VendingMachineInventoryEntry? entry = fridgeComponent.Inventory.Find(x => x.ID == itemId);
 
             if (entry == null)
             {
@@ -150,12 +152,12 @@ namespace Content.Server.VendingMachine.Systems
                 fridgeComponent.entityReference.Remove(itemId);
             }
 
-            fridgeComponent.UserInterface?.SendMessage(new SmartFridgeInventoryMessage(fridgeComponent.Inventory));
-            TryUpdateVisualState(uid, SmartFridgeVisualState.Eject, fridgeComponent);
+            fridgeComponent.UserInterface?.SendMessage(new VendingMachineInventoryMessage(fridgeComponent.Inventory));
+            TryUpdateVisualState(uid, VendingMachineVisualState.Eject, fridgeComponent);
             fridgeComponent.Owner.SpawnTimer(fridgeComponent.AnimationDuration, () =>
             {
                 fridgeComponent.Ejecting = false;
-                TryUpdateVisualState(uid, SmartFridgeVisualState.Normal, fridgeComponent);
+                TryUpdateVisualState(uid, VendingMachineVisualState.Normal, fridgeComponent);
                 fridgeComponent.Storage.Remove(targetEntity);
             });
             SoundSystem.Play(Filter.Pvs(fridgeComponent.Owner), fridgeComponent.SoundVend.GetSound(), fridgeComponent.Owner, AudioParams.Default.WithVolume(-2f));

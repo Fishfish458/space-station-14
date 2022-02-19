@@ -147,7 +147,7 @@ namespace Content.Server.VendingMachines.Systems
             return;
         }
 
-                public void TryEjectVendorItem(EntityUid uid, string itemId, bool throwItem, SharedVendingMachineComponent? vendComponent = null)
+        public void TryEjectVendorItem(EntityUid uid, string itemId, bool throwItem, SharedVendingMachineComponent? vendComponent = null)
         {
             if (!Resolve(uid, ref vendComponent))
                 return;
