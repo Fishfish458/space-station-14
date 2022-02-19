@@ -541,10 +541,6 @@
   - type: Advertise
     pack: SmartFridgeAds
   - type: Speech
-  - type: UserInterface
-    interfaces:
-    - key: enum.SmartFridgeUiKey.Key
-      type: SmartFridgeBoundUserInterface
   - type: Sprite
     sprite: Structures/Machines/VendingMachines/smartfridge.rsi
     layers:
@@ -560,6 +556,7 @@
     - type: VendingMachineVisualizer
       normalUnshaded: true
       broken: true
+    - type: WiresVisualizer
   - type: PointLight
     radius: 1.5
     energy: 1.6

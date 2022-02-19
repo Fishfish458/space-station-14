@@ -10,12 +10,16 @@ using Content.Shared.Item;
 using Robust.Shared.Containers;
 using Content.Server.Storage.Components;
 using System.Linq;
+using Content.Server.VendingMachines.Systems;
+using Content.Server.VendingMachines;
 
-using static Content.Shared.SmartFridge.SharedSmartFridgeComponent;
+using static Content.Server.VendingMachines.Systems.BaseVendingMachineSystem;
 
-namespace Content.Server.SmartFridge
+// using static Content.Shared.SmartFridge.SharedSmartFridgeComponent;
+
+namespace Content.Server.VendingMachine.Systems
 {
-    public sealed class SmartFridgeSystem : EntitySystem
+    public sealed class SmartFridgeSystem : BaseVendingMachineSystem
     {
         [Dependency] private readonly PopupSystem _popupSystem = default!;
         private uint _nextAllocatedId = 0;
@@ -24,11 +28,6 @@ namespace Content.Server.SmartFridge
         {
             base.Initialize();
             SubscribeLocalEvent<SmartFridgeComponent, ComponentInit>(OnComponentInit);
-            SubscribeLocalEvent<SmartFridgeComponent, ActivateInWorldEvent>(HandleActivate);
-            SubscribeLocalEvent<SmartFridgeComponent, PowerChangedEvent>(OnPowerChanged);
-            SubscribeLocalEvent<SmartFridgeComponent, InventorySyncRequestMessage>(OnInventoryRequestMessage);
-            SubscribeLocalEvent<SmartFridgeComponent, SmartFridgeEjectMessage>(OnInventoryEjectMessage);
-            SubscribeLocalEvent<SmartFridgeComponent, BreakageEventArgs>(OnBreak);
             SubscribeLocalEvent<SmartFridgeComponent, InteractUsingEvent>(OnInteractUsing);
         }
 
@@ -43,58 +42,6 @@ namespace Content.Server.SmartFridge
             component.Storage = uid.EnsureContainer<Container>("fridge_entity_container");
         }
 
-        private void OnInventoryRequestMessage(EntityUid uid, SmartFridgeComponent component, InventorySyncRequestMessage args)
-        {
-            if (!IsPowered(uid, component))
-                return;
-
-            component.UserInterface?.SendMessage(new SmartFridgeInventoryMessage(component.Inventory));
-        }
-
-        private void OnInventoryEjectMessage(EntityUid uid, SmartFridgeComponent component, SmartFridgeEjectMessage args)
-        {
-            if (!IsPowered(uid, component))
-                return;
-
-            if (args.Session.AttachedEntity is not { Valid: true } entity || Deleted(entity))
-                return;
-
-            TryEjectVendorItem(uid, args.ID, component);
-        }
-
-        private void HandleActivate(EntityUid uid, SmartFridgeComponent component, ActivateInWorldEvent args)
-        {
-            if (!TryComp<ActorComponent>(args.User, out var actor))
-            {
-                return;
-            }
-
-            if (!IsPowered(uid, component))
-            {
-                return;
-            }
-
-            if (TryComp<WiresComponent>(uid, out var wires))
-            {
-                if (wires.IsPanelOpen)
-                {
-                    wires.OpenInterface(actor.PlayerSession);
-                    return;
-                }
-            }
-            component.UserInterface?.Toggle(actor.PlayerSession);
-        }
-
-        private void OnPowerChanged(EntityUid uid, SmartFridgeComponent component, PowerChangedEvent args)
-        {
-            TryUpdateVisualState(uid, null, component);
-        }
-
-        private void OnBreak(EntityUid uid, SmartFridgeComponent fridgeComponent, BreakageEventArgs eventArgs)
-        {
-            fridgeComponent.Broken = true;
-            TryUpdateVisualState(uid, SmartFridgeVisualState.Broken, fridgeComponent);
-        }
         private void OnInteractUsing(EntityUid uid, SmartFridgeComponent fridgeComponent, InteractUsingEvent args)
         {
             if (TryComp<ServerStorageComponent>(args.Used, out ServerStorageComponent? storageComponent))
@@ -105,31 +52,6 @@ namespace Content.Server.SmartFridge
             {
                 TryInsertVendorItem(uid, args.Used, fridgeComponent);
             }
-        }
-
-        public bool IsPowered(EntityUid uid, SmartFridgeComponent? fridgeComponent = null)
-        {
-            if (!Resolve(uid, ref fridgeComponent))
-                return false;
-
-            if (!TryComp<ApcPowerReceiverComponent>(fridgeComponent.Owner, out var receiver))
-            {
-                return false;
-            }
-            return receiver.Powered;
-        }
-
-        public void Deny(EntityUid uid, SmartFridgeComponent? fridgeComponent = null)
-        {
-            if (!Resolve(uid, ref fridgeComponent))
-                return;
-
-            SoundSystem.Play(Filter.Pvs(fridgeComponent.Owner), fridgeComponent.SoundDeny.GetSound(), fridgeComponent.Owner, AudioParams.Default.WithVolume(-2f));
-            TryUpdateVisualState(uid, SmartFridgeVisualState.Deny, fridgeComponent);
-            fridgeComponent.Owner.SpawnTimer(fridgeComponent.AnimationDuration, () =>
-            {
-                TryUpdateVisualState(uid, SmartFridgeVisualState.Normal, fridgeComponent);
-            });
         }
 
         public void TryInsertFromStorage(EntityUid uid, ServerStorageComponent storageComponent, SmartFridgeComponent fridgeComponent)
@@ -194,7 +116,7 @@ namespace Content.Server.SmartFridge
             return true;
         }
 
-        public void TryEjectVendorItem(EntityUid uid, uint itemId, SmartFridgeComponent? fridgeComponent = null)
+        public override void TryEjectVendorItem(EntityUid uid, uint itemId, SmartFridgeComponent? fridgeComponent = null)
         {
             if (!Resolve(uid, ref fridgeComponent))
                 return;
@@ -237,31 +159,6 @@ namespace Content.Server.SmartFridge
                 fridgeComponent.Storage.Remove(targetEntity);
             });
             SoundSystem.Play(Filter.Pvs(fridgeComponent.Owner), fridgeComponent.SoundVend.GetSound(), fridgeComponent.Owner, AudioParams.Default.WithVolume(-2f));
-        }
-
-        public void TryUpdateVisualState(EntityUid uid, SmartFridgeVisualState? state = SmartFridgeVisualState.Normal, SmartFridgeComponent? fridgeComponent = null)
-        {
-            if (!Resolve(uid, ref fridgeComponent))
-                return;
-
-            var finalState = state == null ? SmartFridgeVisualState.Normal : state;
-            if (fridgeComponent.Broken)
-            {
-                finalState = SmartFridgeVisualState.Broken;
-            }
-            else if (fridgeComponent.Ejecting)
-            {
-                finalState = SmartFridgeVisualState.Eject;
-            }
-            else if (!IsPowered(uid, fridgeComponent))
-            {
-                finalState = SmartFridgeVisualState.Off;
-            }
-
-            if (TryComp<AppearanceComponent>(fridgeComponent.Owner, out var appearance))
-            {
-                appearance.SetData(SmartFridgeVisuals.VisualState, finalState);
-            }
         }
     }
 }

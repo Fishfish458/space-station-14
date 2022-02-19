@@ -39,7 +39,7 @@ namespace Content.Client.VendingMachines.UI
             var longestEntry = "";
             foreach (VendingMachineInventoryEntry entry in inventory)
             {
-                var itemName = _prototypeManager.Index<EntityPrototype>(entry.ID).Name;
+                var itemName = entry.Name;
                 if (itemName.Length > longestEntry.Length)
                     longestEntry = itemName;
 
