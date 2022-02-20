@@ -19,7 +19,10 @@ namespace Content.Server.Entry
             "ItemCabinetVisuals",
             "DiseaseMachineVisuals",
             "HandheldGPS",
-            "PotencyVisuals"
+            "PotencyVisuals",
+            "HandheldGPS",
+            "PlayingCardVisuals",
+            "PlayingCardHandVisuals"
         };
     }
 }
