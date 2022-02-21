@@ -5,8 +5,7 @@ using Content.Shared.Sound;
 
 namespace Content.Shared.VendingMachines
 {
-    [Virtual]
-    [NetworkedComponent()]
+    [NetworkedComponent]
     public class SharedVendingMachineComponent : Component
     {
         [ViewVariables]

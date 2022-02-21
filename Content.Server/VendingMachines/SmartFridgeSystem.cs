@@ -3,9 +3,7 @@ using Robust.Shared.Audio;
 using Robust.Shared.Player;
 using Content.Server.Popups;
 using Content.Server.Power.Components;
-using Content.Server.WireHacking;
 using Robust.Server.GameObjects;
-using Content.Shared.Acts;
 using Content.Shared.Item;
 using Robust.Shared.Containers;
 using Content.Server.Storage.Components;
@@ -13,11 +11,9 @@ using System.Linq;
 using Content.Server.VendingMachines.Systems;
 using Content.Server.VendingMachines;
 using Content.Shared.VendingMachines;
+using Content.Shared.Acts;
 
 using static Content.Shared.VendingMachines.SharedVendingMachineComponent;
-using static Content.Server.VendingMachines.Systems.BaseVendingMachineSystem;
-
-// using static Content.Shared.SmartFridge.SharedSmartFridgeComponent;
 
 namespace Content.Server.VendingMachine.Systems
 {
@@ -31,6 +27,11 @@ namespace Content.Server.VendingMachine.Systems
             base.Initialize();
             SubscribeLocalEvent<SmartFridgeComponent, ComponentInit>(OnComponentInit);
             SubscribeLocalEvent<SmartFridgeComponent, InteractUsingEvent>(OnInteractUsing);
+            SubscribeLocalEvent<SmartFridgeComponent, PowerChangedEvent>(OnPowerChanged);
+            SubscribeLocalEvent<SmartFridgeComponent, ActivateInWorldEvent>(HandleActivate);
+            SubscribeLocalEvent<SmartFridgeComponent, InventorySyncRequestMessage>(OnInventoryRequestMessage);
+            SubscribeLocalEvent<SmartFridgeComponent, VendingMachineEjectMessage>(OnInventoryEjectMessage);
+            SubscribeLocalEvent<SmartFridgeComponent, BreakageEventArgs>(OnBreak);
         }
 
         private void OnComponentInit(EntityUid uid, SmartFridgeComponent component, ComponentInit args)
@@ -107,7 +108,7 @@ namespace Content.Server.VendingMachine.Systems
 
             if (!matchedEntry)
             {
-                uint itemID = _nextAllocatedId++;
+                string itemID = _nextAllocatedId++.ToString();
                 VendingMachineInventoryEntry newEntry = new VendingMachineInventoryEntry(itemID, name, 1);
                 fridgeComponent.entityReference.Add(itemID, new Queue<EntityUid>(new[] {itemUid}));
                 fridgeComponent.Inventory.Add(newEntry);
@@ -118,9 +119,21 @@ namespace Content.Server.VendingMachine.Systems
             return true;
         }
 
-        public override void TryEjectVendorItem(EntityUid uid, uint itemId, SmartFridgeComponent? fridgeComponent = null)
+        public override void ToggleInterface(EntityUid uid, ActorComponent actor, SharedVendingMachineComponent component)
         {
-            if (!Resolve(uid, ref fridgeComponent))
+            if (TryComp<SmartFridgeComponent>(uid, out SmartFridgeComponent? smartFridge))
+                smartFridge.UserInterface?.Toggle(actor.PlayerSession);
+        }
+
+        public override void SendInventoryMessage(EntityUid uid, SharedVendingMachineComponent component)
+        {
+            if(TryComp<SmartFridgeComponent>(uid, out SmartFridgeComponent? smartFridge))
+                smartFridge.UserInterface?.SendMessage(new VendingMachineInventoryMessage(component.Inventory));
+        }
+
+        public override void TryEjectVendorItem(EntityUid uid, string itemId, bool throwItem, SharedVendingMachineComponent? vendComponent = null)
+        {
+            if (!TryComp<SmartFridgeComponent>(uid, out SmartFridgeComponent? fridgeComponent))
                 return;
 
             if (fridgeComponent.Storage == null || fridgeComponent.Ejecting || fridgeComponent.Inventory == null || fridgeComponent.Inventory.Count == 0 || fridgeComponent.Broken || !IsPowered(uid, fridgeComponent))

@@ -8,15 +8,15 @@ using Content.Server.VendingMachines.Systems;
 
 namespace Content.Server.VendingMachines
 {
-    [RegisterComponent, Friend(typeof(SmartFridgeSystem))]
-    public class SmartFridgeComponent : SharedVendingMachineComponent
+    [RegisterComponent]
+    public sealed class SmartFridgeComponent : SharedVendingMachineComponent
     {
         [ViewVariables] public BoundUserInterface? UserInterface => Owner.GetUIOrNull(VendingMachineUiKey.Key);
 
         [DataField("whitelist")]
         public EntityWhitelist? Whitelist;
         public Container? Storage = default!;
-        public Dictionary<uint,  Queue<EntityUid>> entityReference = new();
+        public Dictionary<string,  Queue<EntityUid>> entityReference = new();
     }
 }
 

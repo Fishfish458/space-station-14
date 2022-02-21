@@ -5,6 +5,11 @@ using Content.Shared.VendingMachines;
 using Robust.Server.GameObjects;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
+using Robust.Shared.Audio;
+using Robust.Shared.Player;
+using Content.Server.Throwing;
+using Content.Shared.Interaction;
+using Content.Shared.Acts;
 
 using Content.Server.VendingMachines.Systems;
 using static Content.Shared.VendingMachines.SharedVendingMachineComponent;
@@ -24,6 +29,11 @@ namespace Content.Server.VendingMachines.systems
         {
             base.Initialize();
             SubscribeLocalEvent<VendingMachineComponent, ComponentInit>(OnComponentInit);
+            SubscribeLocalEvent<VendingMachineComponent, PowerChangedEvent>(OnPowerChanged);
+            SubscribeLocalEvent<VendingMachineComponent, ActivateInWorldEvent>(HandleActivate);
+            SubscribeLocalEvent<VendingMachineComponent, InventorySyncRequestMessage>(OnInventoryRequestMessage);
+            SubscribeLocalEvent<VendingMachineComponent, VendingMachineEjectMessage>(OnInventoryEjectMessage);
+            SubscribeLocalEvent<VendingMachineComponent, BreakageEventArgs>(OnBreak);
         }
 
         private void OnComponentInit(EntityUid uid, VendingMachineComponent component, ComponentInit args)
@@ -70,6 +80,68 @@ namespace Content.Server.VendingMachines.systems
                 inventory.Add(new VendingMachineInventoryEntry(id, prototype.Name, amount));
             }
             vendComponent.Inventory = inventory;
+        }
+
+        public override void TryEjectVendorItem(EntityUid uid, string itemId, bool throwItem, SharedVendingMachineComponent? vendComponent = null)
+        {
+            if (!Resolve(uid, ref vendComponent))
+                return;
+
+            if (vendComponent.Ejecting || vendComponent.Broken || !IsPowered(uid, vendComponent))
+            {
+                return;
+            }
+
+            var entry = vendComponent.Inventory.Find(x => x.ID == itemId);
+            if (entry == null)
+            {
+                _popupSystem.PopupEntity(Loc.GetString("vending-machine-component-try-eject-invalid-item"), uid, Filter.Pvs(uid));
+                Deny(uid, vendComponent);
+                return;
+            }
+
+            if (entry.Amount <= 0)
+            {
+                _popupSystem.PopupEntity(Loc.GetString("vending-machine-component-try-eject-out-of-stock"), uid, Filter.Pvs(uid));
+                Deny(uid, vendComponent);
+                return;
+            }
+
+            if (entry.ID == null)
+                return;
+
+            if (!TryComp<TransformComponent>(vendComponent.Owner, out var transformComp))
+                return;
+
+            // Start Ejecting, and prevent users from ordering while anim playing
+            vendComponent.Ejecting = true;
+            entry.Amount--;
+            SendInventoryMessage(uid, vendComponent);
+            TryUpdateVisualState(uid, VendingMachineVisualState.Eject, vendComponent);
+            vendComponent.Owner.SpawnTimer(vendComponent.AnimationDuration, () =>
+            {
+                vendComponent.Ejecting = false;
+                TryUpdateVisualState(uid, VendingMachineVisualState.Normal, vendComponent);
+                var ent = EntityManager.SpawnEntity(entry.ID, transformComp.Coordinates);
+                if (throwItem)
+                {
+                    float range = vendComponent.NonLimitedEjectRange;
+                    Vector2 direction = new Vector2(_random.NextFloat(-range, range), _random.NextFloat(-range, range));
+                    ent.TryThrow(direction, vendComponent.NonLimitedEjectForce);
+                }
+            });
+            SoundSystem.Play(Filter.Pvs(vendComponent.Owner), vendComponent.SoundVend.GetSound(), vendComponent.Owner, AudioParams.Default.WithVolume(-2f));
+        }
+
+
+        public override void SendInventoryMessage(EntityUid uid, SharedVendingMachineComponent component)
+        {
+
+        }
+
+        public override void ToggleInterface(EntityUid uid, ActorComponent actor, SharedVendingMachineComponent component)
+        {
+
         }
     }
 }
