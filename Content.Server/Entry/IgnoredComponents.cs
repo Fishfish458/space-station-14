@@ -22,7 +22,8 @@ namespace Content.Server.Entry
             "PotencyVisuals",
             "HandheldGPS",
             "PlayingCardVisuals",
-            "PlayingCardHandVisuals"
+            "PlayingCardHandVisuals",
+            "PlayingCardDeckVisuals"
         };
     }
 }
