@@ -21,7 +21,7 @@ namespace Content.Client.PlayingCard.UI;
             if(State != null)
                 UpdateState(State);
 
-            _window = new PlayingCardHandWindow(this) {Title = entMan.GetComponent<MetaDataComponent>(Owner.Owner).EntityName};
+            _window = new PlayingCardHandWindow(this, Owner) {Title = entMan.GetComponent<MetaDataComponent>(Owner.Owner).EntityName};
 
             _window.OnClose += Close;
             _window.OpenCentered();
