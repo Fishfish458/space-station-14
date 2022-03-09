@@ -1,0 +1,47 @@
+- type: entity
+  name: defibrillator
+  parent: BaseItem
+  id: Defibrillator
+  description: A device that delivers powerful shocks to detachable paddles that resuscitate incapacitated patients.
+  components:
+  - type: Sprite
+    sprite: Objects/Specific/Medical/defib.rsi
+    layers:
+    - state: icon
+      map: ["enum.DefibVisualLayers.Base"]
+    - state: attachedpaddles
+      map: ["enum.DefibVisualLayers.Paddles"]
+    - state: powered
+      map: ["enum.DefibVisualLayers.Powered"]
+    - state: charge100
+      map: ["enum.DefibVisualLayers.Charge"]
+  # - type: DefibVisuals
+  - type: Clothing
+    size: 9999
+    QuickEquip: false
+    Slots:
+    - back
+    sprite: Objects/Specific/Medical/defib.rsi
+  - type: PowerCellSlot
+    slotSize: Large
+    fitsInCharger: false
+    cellSlot:
+      startingItem: PowerCellLargeStandard
+
+- type: entity
+  name: defib paddles
+  parent: BaseItem
+  id: DefibPaddles
+  description: Definition of a Classic. Keeping murder affordable since 200,000 BCE.
+  components:
+  - type: Sprite
+    sprite: Objects/Specific/Medical/defib.rsi
+    state: defibpaddles0
+  - type: Clothing
+    size: 24
+    sprite: Objects/Specific/Medical/defib.rsi
+    QuickEquip: false
+    Slots:
+    - back
+  # - type: ItemCooldown
+  - type: Wieldable
