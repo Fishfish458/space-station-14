@@ -5,39 +5,55 @@ using Content.Shared.Damage;
 using Content.Shared.Interaction;
 using Content.Shared.MobState.Components;
 using Robust.Server.GameObjects;
-using static Content.Shared.MedicalScanner.SharedHealthAnalyzerComponent;
+using Content.Server.Defib.Components;
+using Content.Server.DoAfter;
+using Content.Server.Hands.Components;
+using Content.Server.Hands.Systems;
+using Content.Server.Weapon.Melee;
+using Content.Server.Wieldable.Components;
+using Content.Shared.Hands;
+using Content.Shared.Interaction;
+using Content.Shared.Item;
+using Content.Shared.Popups;
+using Content.Shared.Verbs;
+using Robust.Shared.Audio;
 
 namespace Content.Server.Defib
 {
     public sealed class DefibSystem : EntitySystem
     {
         [Dependency] private readonly DoAfterSystem _doAfterSystem = default!;
+        [Dependency] private readonly HandVirtualItemSystem _virtualItemSystem = default!;
 
         public override void Initialize()
         {
             base.Initialize();
-            SubscribeLocalEvent<HealthAnalyzerComponent, ActivateInWorldEvent>(HandleActivateInWorld);
-            SubscribeLocalEvent<HealthAnalyzerComponent, AfterInteractEvent>(OnAfterInteract);
+            SubscribeLocalEvent<DefibComponent, ActivateInWorldEvent>(HandleActivateInWorld);
+            SubscribeLocalEvent<DefibComponent, AfterInteractEvent>(OnAfterInteract);
             SubscribeLocalEvent<TargetScanSuccessfulEvent>(OnTargetScanSuccessful);
             SubscribeLocalEvent<ScanCancelledEvent>(OnScanCancelled);
         }
 
-        private void HandleActivateInWorld(EntityUid uid, HealthAnalyzerComponent healthAnalyzer, ActivateInWorldEvent args)
+        private void HandleActivateInWorld(EntityUid uid, DefibComponent defibComponent, ActivateInWorldEvent args)
         {
-            OpenUserInterface(args.User, healthAnalyzer);
+            if (!TryComp<TransformComponent>(defibComponent.Owner, out var transformComp))
+                return;
+
+            var paddles = EntityManager.SpawnEntity("DefibPaddles", transformComp.Coordinates);
+            _virtualItemSystem.TrySpawnVirtualItemInHand(paddles, args.User);
         }
 
-        private void OnAfterInteract(EntityUid uid, HealthAnalyzerComponent healthAnalyzer, AfterInteractEvent args)
+        private void OnAfterInteract(EntityUid uid, DefibComponent defibComponent, AfterInteractEvent args)
         {
 
             // IF CHARGED
             // IF TARGET IS MOB
             // IF target is dead
             //
-            if (healthAnalyzer.CancelToken != null)
+            if (defibComponent.CancelToken != null)
             {
-                healthAnalyzer.CancelToken.Cancel();
-                healthAnalyzer.CancelToken = null;
+                defibComponent.CancelToken.Cancel();
+                defibComponent.CancelToken = null;
                 return;
             }
 
@@ -47,17 +63,17 @@ namespace Content.Server.Defib
             if (!args.CanReach)
                 return;
 
-            if (healthAnalyzer.CancelToken != null)
+            if (defibComponent.CancelToken != null)
                 return;
 
             if (!HasComp<MobStateComponent>(args.Target))
                 return;
 
-            healthAnalyzer.CancelToken = new CancellationTokenSource();
-            _doAfterSystem.DoAfter(new DoAfterEventArgs(args.User, healthAnalyzer.ScanDelay, healthAnalyzer.CancelToken.Token, target: args.Target)
+            defibComponent.CancelToken = new CancellationTokenSource();
+            _doAfterSystem.DoAfter(new DoAfterEventArgs(args.User, defibComponent.defibDelay, defibComponent.CancelToken.Token, target: args.Target)
             {
-                BroadcastFinishedEvent = new TargetScanSuccessfulEvent(args.User, args.Target, healthAnalyzer),
-                BroadcastCancelledEvent = new ScanCancelledEvent(healthAnalyzer),
+                BroadcastFinishedEvent = new TargetScanSuccessfulEvent(args.User, args.Target, defibComponent),
+                BroadcastCancelledEvent = new ScanCancelledEvent(defibComponent),
                 BreakOnTargetMove = true,
                 BreakOnUserMove = true,
                 BreakOnStun = true,
@@ -68,43 +84,21 @@ namespace Content.Server.Defib
         private void OnTargetScanSuccessful(TargetScanSuccessfulEvent args)
         {
             args.Component.CancelToken = null;
-            UpdateScannedUser(args.Component.Owner, args.User, args.Target, args.Component);
+            // UpdateScannedUser(args.Component.Owner, args.User, args.Target, args.Component);
         }
 
-        private void OpenUserInterface(EntityUid user, HealthAnalyzerComponent healthAnalyzer)
-        {
-            if (!TryComp<ActorComponent>(user, out var actor))
-                return;
-
-            healthAnalyzer.UserInterface?.Open(actor.PlayerSession);
-        }
-
-        public void UpdateScannedUser(EntityUid uid, EntityUid user, EntityUid? target, HealthAnalyzerComponent? healthAnalyzer)
-        {
-            if (!Resolve(uid, ref healthAnalyzer))
-                return;
-
-            if (target == null || healthAnalyzer.UserInterface == null)
-                return;
-
-            if (!HasComp<DamageableComponent>(target))
-                return;
-
-            OpenUserInterface(user, healthAnalyzer);
-            healthAnalyzer.UserInterface?.SendMessage(new HealthAnalyzerScannedUserMessage(target));
-        }
 
         private static void OnScanCancelled(ScanCancelledEvent args)
         {
-            args.HealthAnalyzer.CancelToken = null;
+            args.Defib.CancelToken = null;
         }
 
         private sealed class ScanCancelledEvent : EntityEventArgs
         {
-            public readonly HealthAnalyzerComponent HealthAnalyzer;
-            public ScanCancelledEvent(HealthAnalyzerComponent healthAnalyzer)
+            public readonly DefibComponent Defib;
+            public ScanCancelledEvent(DefibComponent defib)
             {
-                HealthAnalyzer = healthAnalyzer;
+                Defib = defib;
             }
         }
 
@@ -112,9 +106,9 @@ namespace Content.Server.Defib
         {
             public EntityUid User { get; }
             public EntityUid? Target { get; }
-            public HealthAnalyzerComponent Component { get; }
+            public DefibComponent Component { get; }
 
-            public TargetScanSuccessfulEvent(EntityUid user, EntityUid? target, HealthAnalyzerComponent component)
+            public TargetScanSuccessfulEvent(EntityUid user, EntityUid? target, DefibComponent component)
             {
                 User = user;
                 Target = target;

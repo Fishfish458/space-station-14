@@ -27,6 +27,7 @@
     fitsInCharger: false
     cellSlot:
       startingItem: PowerCellLargeStandard
+  - type: Defib
 
 - type: entity
   name: defib paddles
