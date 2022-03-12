@@ -17,7 +17,7 @@ namespace Content.Server.Defib.Components
         public CancellationTokenSource? CancelToken;
         [DataField("defibDelay")]
         [ViewVariables]
-        public float defibDelay = 0.8f;
+        public float defibDelay = 2.6f;
 
         [DataField("damage", required: true)]
         [ViewVariables(VVAccess.ReadWrite)]

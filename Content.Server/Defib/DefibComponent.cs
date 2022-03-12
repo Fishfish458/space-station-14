@@ -20,7 +20,7 @@ namespace Content.Server.Defib.Components
 
         [DataField("defibDelay")]
         [ViewVariables]
-        public float defibDelay = 0.8f;
+        public float defibDelay = 2.5f;
         [DataField("rechargeTime")]
         [ViewVariables]
         public float rechargeTime = 0.8f;

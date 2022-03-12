@@ -30,6 +30,7 @@ using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
 using Content.Shared.Inventory;
+using Content.Shared.Sound;
 
 namespace Content.Server.Defib
 {
@@ -136,6 +137,10 @@ namespace Content.Server.Defib
             mobState.TryGetState(damageable.TotalDamage, out var newstate, out var threshold);
             if (newstate is not null)
             {
+            SoundSpecifier TurnOnSound = new SoundPathSpecifier("/Audio/Items/Medical/defib_zap.ogg");
+            SoundSystem.Play(Filter.Pvs(uid), TurnOnSound.GetSound(), uid);
+            SoundSpecifier success = new SoundPathSpecifier("/Audio/Items/Medical/defib_success.ogg");
+            SoundSystem.Play(Filter.Pvs(uid), success.GetSound(), uid);
                 mobState.SetMobState(null, (newstate, threshold));
             }
         }
@@ -167,6 +172,8 @@ namespace Content.Server.Defib
                 return;
 
             defibComponent.CancelToken = new CancellationTokenSource();
+            SoundSpecifier TurnOnSound = new SoundPathSpecifier("/Audio/Items/Medical/defib_charge.ogg");
+            SoundSystem.Play(Filter.Pvs(uid), TurnOnSound.GetSound(), uid);
             _doAfterSystem.DoAfter(new DoAfterEventArgs(args.User, defibComponent.defibDelay, defibComponent.CancelToken.Token, target: args.Target)
             {
                 BroadcastFinishedEvent = new TargetScanSuccessfulEvent(args.User, args.Target, defibComponent),
