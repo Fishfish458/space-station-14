@@ -8,23 +8,20 @@ namespace Content.Server.Defib.Components
     ///     Component for defibrillator
     /// </summary>
     [RegisterComponent]
-    public sealed class DefibComponent : Component
+    public sealed class DefibPaddlesComponent : Component
     {
         // [ViewVariables(VVAccess.ReadWrite)]
         // [DataField("wattage")]
         // public float Wattage { get; set; } = 3f;
                 // Damage that will be healed on a success
-        [DataField("damage", required: true)]
-        [ViewVariables(VVAccess.ReadWrite)]
-        public DamageSpecifier Damage = default!;
-
+        public CancellationTokenSource? CancelToken;
         [DataField("defibDelay")]
         [ViewVariables]
         public float defibDelay = 0.8f;
-        [DataField("rechargeTime")]
-        [ViewVariables]
-        public float rechargeTime = 0.8f;
-        public CancellationTokenSource? CancelToken;
+
+        [DataField("damage", required: true)]
+        [ViewVariables(VVAccess.ReadWrite)]
+        public DamageSpecifier Damage = default!;
         // [ViewVariables(VVAccess.ReadWrite)] [DataField("turnOnSound")] public SoundSpecifier TurnOnSound = new SoundPathSpecifier("/Audio/Items/flashlight_on.ogg");
         // [ViewVariables(VVAccess.ReadWrite)] [DataField("turnOnFailSound")] public SoundSpecifier TurnOnFailSound = new SoundPathSpecifier("/Audio/Machines/button.ogg");
         // [ViewVariables(VVAccess.ReadWrite)] [DataField("turnOffSound")] public SoundSpecifier TurnOffSound = new SoundPathSpecifier("/Audio/Items/flashlight_off.ogg");

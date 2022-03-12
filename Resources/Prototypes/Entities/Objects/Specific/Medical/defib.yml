@@ -28,6 +28,11 @@
     cellSlot:
       startingItem: PowerCellLargeStandard
   - type: Defib
+    damage:
+      groups:
+        Brute: -200
+        Burn: -200
+  - type: TetheredItemHost
 
 - type: entity
   name: defib paddles
@@ -46,3 +51,8 @@
     - back
   # - type: ItemCooldown
   - type: Wieldable
+  - type: DefibPaddles
+    damage:
+      groups:
+        Brute: -200
+        Burn: -200

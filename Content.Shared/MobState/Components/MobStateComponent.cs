@@ -284,7 +284,7 @@ namespace Content.Shared.MobState.Components
         /// <summary>
         ///     Sets the mob state and marks the component as dirty.
         /// </summary>
-        private void SetMobState(IMobState? old, (IMobState state, FixedPoint2 threshold)? current)
+        public void SetMobState(IMobState? old, (IMobState state, FixedPoint2 threshold)? current)
         {
             var entMan = _entMan;
 
