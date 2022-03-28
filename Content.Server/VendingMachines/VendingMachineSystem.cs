@@ -7,7 +7,6 @@ using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
 using Robust.Shared.Audio;
 using Robust.Shared.Player;
-using Content.Server.Throwing;
 using Content.Shared.Interaction;
 using Content.Shared.Acts;
 
@@ -127,7 +126,7 @@ namespace Content.Server.VendingMachines.systems
                 {
                     float range = vendComponent.NonLimitedEjectRange;
                     Vector2 direction = new Vector2(_random.NextFloat(-range, range), _random.NextFloat(-range, range));
-                    ent.TryThrow(direction, vendComponent.NonLimitedEjectForce);
+                    _throwingSystem.TryThrow(ent, direction, vendComponent.NonLimitedEjectForce);
                 }
             });
             SoundSystem.Play(Filter.Pvs(vendComponent.Owner), vendComponent.SoundVend.GetSound(), vendComponent.Owner, AudioParams.Default.WithVolume(-2f));
