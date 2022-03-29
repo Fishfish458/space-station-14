@@ -1,12 +1,8 @@
 using System;
 using Content.Server.UserInterface;
 using Content.Server.WireHacking;
-using Content.Shared.Sound;
 using Content.Shared.VendingMachines;
 using Robust.Server.GameObjects;
-using Robust.Shared.GameObjects;
-using Robust.Shared.Serialization.Manager.Attributes;
-using Robust.Shared.ViewVariables;
 using Content.Server.VendingMachines.systems;
 using static Content.Shared.Wires.SharedWiresComponent;
 
@@ -15,6 +11,8 @@ namespace Content.Server.VendingMachines
     [RegisterComponent]
     public sealed class VendingMachineComponent : SharedVendingMachineComponent, IWires
     {
+        [ViewVariables] public BoundUserInterface? UserInterface => Owner.GetUIOrNull(VendingMachineUiKey.Key);
+
         [DataField("pack")]
         public string PackPrototypeId = string.Empty;
         public string SpriteName = "";

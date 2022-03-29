@@ -9,7 +9,6 @@ using Content.Shared.Access.Components;
 using Content.Shared.Access.Systems;
 using Content.Shared.VendingMachines;
 using Robust.Server.GameObjects;
-using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
 using Content.Shared.Acts;
 using static Content.Shared.VendingMachines.SharedVendingMachineComponent;
@@ -19,7 +18,6 @@ namespace Content.Server.VendingMachines.Systems
     public abstract class BaseVendingMachineSystem : EntitySystem
     {
         [Dependency] private readonly IRobustRandom _random = default!;
-        [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
         [Dependency] private readonly AccessReaderSystem _accessReader = default!;
         [Dependency] private readonly PopupSystem _popupSystem = default!;
 
@@ -45,14 +43,10 @@ namespace Content.Server.VendingMachines.Systems
         public void HandleActivate(EntityUid uid, SharedVendingMachineComponent component, ActivateInWorldEvent args)
         {
             if (!TryComp<ActorComponent>(args.User, out var actor))
-            {
                 return;
-            }
 
             if (!IsPowered(uid, component))
-            {
                 return;
-            }
 
             if (TryComp<WiresComponent>(uid, out var wires))
             {
@@ -63,7 +57,6 @@ namespace Content.Server.VendingMachines.Systems
                 }
             }
 
-            ToggleInterface(uid, actor, component);
         }
 
         public void OnPowerChanged(EntityUid uid, SharedVendingMachineComponent component, PowerChangedEvent args)
@@ -79,7 +72,6 @@ namespace Content.Server.VendingMachines.Systems
 
         public abstract void SendInventoryMessage(EntityUid uid, SharedVendingMachineComponent component);
 
-        public abstract void ToggleInterface(EntityUid uid, ActorComponent actor, SharedVendingMachineComponent component);
 
         public bool IsPowered(EntityUid uid, SharedVendingMachineComponent? vendComponent = null)
         {
@@ -87,9 +79,8 @@ namespace Content.Server.VendingMachines.Systems
                 return false;
 
             if (!TryComp<ApcPowerReceiverComponent>(vendComponent.Owner, out var receiver))
-            {
                 return false;
-            }
+
             return receiver.Powered;
         }
 
@@ -128,9 +119,8 @@ namespace Content.Server.VendingMachines.Systems
         public void AuthorizedVend(EntityUid uid, EntityUid sender, string itemId, SharedVendingMachineComponent component)
         {
             if (IsAuthorized(uid, sender, component))
-            {
                 TryEjectVendorItem(uid, itemId, component.CanShoot, component);
-            }
+
             return;
         }
 
@@ -156,9 +146,8 @@ namespace Content.Server.VendingMachines.Systems
             }
 
             if (TryComp<AppearanceComponent>(vendComponent.Owner, out var appearance))
-            {
                 appearance.SetData(VendingMachineVisuals.VisualState, finalState);
-            }
+
         }
 
         public void EjectRandom(EntityUid uid, bool throwItem, SharedVendingMachineComponent? vendComponent = null)
@@ -168,9 +157,7 @@ namespace Content.Server.VendingMachines.Systems
 
             var availableItems = vendComponent.Inventory.Where(x => x.Amount > 0).ToList();
             if (availableItems.Count <= 0)
-            {
                 return;
-            }
 
             TryEjectVendorItem(uid, _random.Pick(availableItems).ID, throwItem, vendComponent);
         }

@@ -3,7 +3,6 @@ using Robust.Shared.Audio;
 using Robust.Shared.Player;
 using Content.Server.Popups;
 using Content.Server.Power.Components;
-using Robust.Server.GameObjects;
 using Content.Shared.Item;
 using Robust.Shared.Containers;
 using Content.Server.Storage.Components;
@@ -42,7 +41,7 @@ namespace Content.Server.VendingMachine.Systems
             {
                 TryUpdateVisualState(uid, null, component);
             }
-            component.Storage = uid.EnsureContainer<Container>("fridge_entity_container");
+            component.Storage = uid.EnsureContainer<Container>(component.Name);
         }
 
         private void OnInteractUsing(EntityUid uid, SmartFridgeComponent fridgeComponent, InteractUsingEvent args)
@@ -70,10 +69,9 @@ namespace Content.Server.VendingMachine.Systems
                 if (insertSuccess)
                     addedCount++;
             }
+
             if (addedCount > 0)
-            {
                 _popupSystem.PopupEntity(Loc.GetString("smart-fridge-component-storage-insert-success", ("count", addedCount)), uid, Filter.Pvs(uid));
-            }
         }
 
         public bool TryInsertVendorItem(EntityUid uid, EntityUid itemUid, SmartFridgeComponent fridgeComponent)
@@ -119,21 +117,15 @@ namespace Content.Server.VendingMachine.Systems
             return true;
         }
 
-        public override void ToggleInterface(EntityUid uid, ActorComponent actor, SharedVendingMachineComponent component)
-        {
-            if (TryComp<SmartFridgeComponent>(uid, out SmartFridgeComponent? smartFridge))
-                smartFridge.UserInterface?.Toggle(actor.PlayerSession);
-        }
-
         public override void SendInventoryMessage(EntityUid uid, SharedVendingMachineComponent component)
         {
-            if(TryComp<SmartFridgeComponent>(uid, out SmartFridgeComponent? smartFridge))
+            if(TryComp<SmartFridgeComponent>(uid, out var smartFridge))
                 smartFridge.UserInterface?.SendMessage(new VendingMachineInventoryMessage(component.Inventory));
         }
 
         public override void TryEjectVendorItem(EntityUid uid, string itemId, bool throwItem, SharedVendingMachineComponent? vendComponent = null)
         {
-            if (!TryComp<SmartFridgeComponent>(uid, out SmartFridgeComponent? fridgeComponent))
+            if (!TryComp<SmartFridgeComponent>(uid, out var fridgeComponent))
                 return;
 
             if (fridgeComponent.Storage == null || fridgeComponent.Ejecting || fridgeComponent.Inventory == null || fridgeComponent.Inventory.Count == 0 || fridgeComponent.Broken || !IsPowered(uid, fridgeComponent))
@@ -159,6 +151,7 @@ namespace Content.Server.VendingMachine.Systems
             entry.Amount--;
             EntityUid targetEntity = fridgeComponent.entityReference[itemId].Dequeue();
 
+            // NEED TO CHECK IF ENTITY EXISTS
             if (entry.Amount == 0 || targetEntity == null)
             {
                 fridgeComponent.Inventory.Remove(entry);

@@ -20,7 +20,6 @@ namespace Content.Server.VendingMachines.systems
     {
         [Dependency] private readonly IRobustRandom _random = default!;
         [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
-        [Dependency] private readonly AccessReaderSystem _accessReader = default!;
         [Dependency] private readonly PopupSystem _popupSystem = default!;
         [Dependency] private readonly ThrowingSystem _throwingSystem = default!;
 
@@ -40,9 +39,7 @@ namespace Content.Server.VendingMachines.systems
             base.Initialize();
 
             if (TryComp<ApcPowerReceiverComponent>(component.Owner, out var receiver))
-            {
                 TryUpdateVisualState(uid, null, component);
-            }
 
             InitializeFromPrototype(uid, component);
         }
@@ -55,9 +52,7 @@ namespace Content.Server.VendingMachines.systems
             if (string.IsNullOrEmpty(vendComponent.PackPrototypeId)) { return; }
 
             if (!_prototypeManager.TryIndex(vendComponent.PackPrototypeId, out VendingMachineInventoryPrototype? packPrototype))
-            {
                 return;
-            }
 
             MetaData(uid).EntityName = packPrototype.Name;
             vendComponent.AnimationDuration = TimeSpan.FromSeconds(packPrototype.AnimationDuration);
@@ -73,9 +68,8 @@ namespace Content.Server.VendingMachines.systems
             foreach (var (id, amount) in packPrototype.StartingInventory)
             {
                 if (!_prototypeManager.TryIndex(id, out EntityPrototype? prototype))
-                {
                     continue;
-                }
+
                 inventory.Add(new VendingMachineInventoryEntry(id, prototype.Name, amount));
             }
             vendComponent.Inventory = inventory;
@@ -87,9 +81,7 @@ namespace Content.Server.VendingMachines.systems
                 return;
 
             if (vendComponent.Ejecting || vendComponent.Broken || !IsPowered(uid, vendComponent))
-            {
                 return;
-            }
 
             var entry = vendComponent.Inventory.Find(x => x.ID == itemId);
             if (entry == null)
@@ -132,15 +124,10 @@ namespace Content.Server.VendingMachines.systems
             SoundSystem.Play(Filter.Pvs(vendComponent.Owner), vendComponent.SoundVend.GetSound(), vendComponent.Owner, AudioParams.Default.WithVolume(-2f));
         }
 
-
         public override void SendInventoryMessage(EntityUid uid, SharedVendingMachineComponent component)
         {
-
-        }
-
-        public override void ToggleInterface(EntityUid uid, ActorComponent actor, SharedVendingMachineComponent component)
-        {
-
+            if(TryComp<VendingMachineComponent>(uid, out var vendMachine))
+                vendMachine.UserInterface?.SendMessage(new VendingMachineInventoryMessage(component.Inventory));
         }
     }
 }
