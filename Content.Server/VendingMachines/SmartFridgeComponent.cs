@@ -14,7 +14,7 @@ namespace Content.Server.VendingMachines
         [DataField("whitelist")]
         [ViewVariables] public EntityWhitelist? Whitelist;
         [ViewVariables] public Container Storage = default!;
-        public Dictionary<string,  Queue<EntityUid>> entityReference = new();
+        public Dictionary<string, Queue<EntityUid>> entityReference = new();
     }
 }
 

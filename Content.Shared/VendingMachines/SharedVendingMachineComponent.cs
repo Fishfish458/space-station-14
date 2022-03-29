@@ -2,11 +2,10 @@ using Robust.Shared.GameStates;
 using Robust.Shared.Serialization;
 using Content.Shared.Sound;
 
-
 namespace Content.Shared.VendingMachines
 {
     [NetworkedComponent]
-    public class SharedVendingMachineComponent : Component
+    public abstract class SharedVendingMachineComponent : Component
     {
         [ViewVariables]
         public List<VendingMachineInventoryEntry> Inventory = new();
