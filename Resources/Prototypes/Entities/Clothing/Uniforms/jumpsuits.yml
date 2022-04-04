@@ -423,9 +423,13 @@
   name: grey jumpsuit
   components:
   - type: Sprite
-    sprite: Clothing/Uniforms/Jumpsuit/Color/grey.rsi
+    sprite: Clothing/Uniforms/Jumpsuit/Color/white.rsi
+    layers:
+    - state: icon
+      color: "#B4B4B4"
+    - state: icon-belt
   - type: Clothing
-    sprite: Clothing/Uniforms/Jumpsuit/Color/grey.rsi
+    sprite: Clothing/Uniforms/Jumpsuit/Color/white.rsi
 
 - type: entity
   parent: ClothingUniformBase
@@ -489,9 +493,14 @@
   description: A generic red jumpsuit with no rank markings.
   components:
   - type: Sprite
-    sprite: Clothing/Uniforms/Jumpsuit/Color/red.rsi
+    sprite: Clothing/Uniforms/Jumpsuit/Color/white.rsi
+    layers:
+    - state: icon
+      color: "#EB0C07"
+    - state: icon-belt
   - type: Clothing
-    sprite: Clothing/Uniforms/Jumpsuit/Color/red.rsi
+    sprite: Clothing/Uniforms/Jumpsuit/Color/white.rsi
+    color: "#EB0C07"
 
 - type: entity
   parent: ClothingUniformBase
@@ -723,7 +732,7 @@
     sprite: Clothing/Uniforms/Jumpsuit/capformal.rsi
   - type: Clothing
     sprite: Clothing/Uniforms/Jumpsuit/capformal.rsi
-    
+
 - type: entity
   parent: ClothingUniformBase
   id: ClothingUniformJumpsuitCentcomFormal
@@ -733,8 +742,8 @@
   - type: Sprite
     sprite: Clothing/Uniforms/Jumpsuit/centcomformal.rsi
   - type: Clothing
-    sprite: Clothing/Uniforms/Jumpsuit/centcomformal.rsi 
-    
+    sprite: Clothing/Uniforms/Jumpsuit/centcomformal.rsi
+
 - type: entity
   parent: ClothingUniformBase
   id: ClothingUniformJumpsuitHosFormal
@@ -744,8 +753,8 @@
   - type: Sprite
     sprite: Clothing/Uniforms/Jumpsuit/hosformal.rsi
   - type: Clothing
-    sprite: Clothing/Uniforms/Jumpsuit/hosformal.rsi 
-     
+    sprite: Clothing/Uniforms/Jumpsuit/hosformal.rsi
+
 - type: entity
   parent: ClothingUniformBase
   id: ClothingUniformJumpsuitOperative
