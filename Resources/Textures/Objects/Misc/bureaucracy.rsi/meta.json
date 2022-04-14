@@ -11,13 +11,7 @@
       "name": "chestdrawer"
     },
     {
-      "name": "chestdrawer-open",
-      "delays": [
-        [
-          0.5,
-          0.1
-        ]
-      ]
+      "name": "chestdrawer-open"
     },
     {
       "name": "clipboard"
@@ -47,13 +41,7 @@
       "name": "filingcabinet"
     },
     {
-      "name": "filingcabinet-open",
-      "delays": [
-        [
-          0.5,
-          0.1
-        ]
-      ]
+      "name": "filingcabinet-open"
     },
     {
       "name": "folder-base"
@@ -297,17 +285,25 @@
       "name": "tallcabinet"
     },
     {
-      "name": "tallcabinet-open",
-      "delays": [
-        [
-          0.5,
-          0.1
-        ]
-      ]
+      "name": "tallcabinet-open"
     },
     {
       "name": "clipboard-equipped-BELT",
       "directions": 4
+    },
+    {
+        "name": "paper_onfire_overlay",
+        "directions": 1,
+        "delays": [
+            [
+                0.1,
+                0.1,
+                0.1
+            ]
+        ]
+    },
+    {
+      "name": "paper_bundle"
     }
   ]
 }

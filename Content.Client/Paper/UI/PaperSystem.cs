@@ -19,11 +19,16 @@ public sealed class PaperSystem : VisualizerSystem<PaperVisualsComponent>
             sprite.LayerSetState(PaperVisualLayers.Stamp, stampState);
             sprite.LayerSetVisible(PaperVisualLayers.Stamp, true);
         }
+        if (args.Component.TryGetData(PaperVisuals.Burning, out bool burningState))
+        {
+            sprite.LayerSetVisible(PaperVisualLayers.Burning, true);
+        }
     }
 }
 
 public enum PaperVisualLayers
 {
     Stamp,
-    Writing
+    Writing,
+    Burning
 }
